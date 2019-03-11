@@ -18,7 +18,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: 'https://source.unsplash.com/random/200x200'
   },
-  date: {
+  created: {
     type: Date,
     default: Date.now
   }
