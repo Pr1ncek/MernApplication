@@ -70,8 +70,59 @@ router.post('/like/:id', passport.authenticate('jwt', { session: false }), async
   }
 });
 
+// @route   POST api/posts/comment/:id
+// @desc    create new comment on a post with given id
+// @access  Private
+router.post('/comment/:id', passport.authenticate('jwt', { session: false }), async (req, res) => {
+  const { errors, isValid } = validatePostInputs(req.body);
+  if (!isValid) return res.status(400).json(errors);
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ post: 'No post found with this id' });
+    const newComment = {
+      text: req.body.text,
+      user: req.user.id,
+      author: req.user.name,
+      avatar: req.user.avatar
+    };
+    post.comments.unshift(newComment);
+    const savedPost = await post.save();
+    return res.json(savedPost);
+  } catch (error) {
+    res.status(400).json(error);
+  }
+});
+
+// @route   DELETE api/posts/:postId/comment/:commentId
+// @desc    delete comment with given id
+// @access  Private
+router.delete(
+  '/:postId/comment/:commentId',
+  passport.authenticate('jwt', { session: false }),
+  async (req, res) => {
+    try {
+      const post = await Post.findById(req.params.postId);
+      if (!post) return res.status(404).json({ post: 'No post found' });
+      const commentToDelete = post.comments.find(comment => comment.id === req.params.commentId);
+      if (!commentToDelete) return res.status(404).json({ comment: 'This comment was not found' });
+      if (commentToDelete.user.toString() !== req.user.id)
+        return res.status(401).json({ Msg: 'Unauthorized' });
+      post.comments = post.comments.filter(comment => comment.id !== req.params.commentId);
+      const savedPost = await post.save();
+      return res.json(savedPost);
+    } catch (error) {
+      res.status(404).json({
+        ...error,
+        post: 'No post found',
+        comment: 'This comment was not found',
+        Msg: 'Unauthorized'
+      });
+    }
+  }
+);
+
 // @route   DELETE api/posts/:id
-// @desc    delte post with given id
+// @desc    delete post with given id
 // @access  Private
 router.delete('/:id', passport.authenticate('jwt', { session: false }), async (req, res) => {
   try {
